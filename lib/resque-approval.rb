@@ -1,5 +1,9 @@
 require 'resque-approval/version'
+require 'resque'
 
-module ResqueApproval
-  # Your code goes here...
+module Resque
+  module Plugins
+    module Approval
+    end
+  end
 end
