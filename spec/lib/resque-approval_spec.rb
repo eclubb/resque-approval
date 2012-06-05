@@ -55,6 +55,17 @@ describe "Resque::Plugins::Approval" do
 
       Resque.redis.hget('pending_jobs', key).should == value
     end
+
+    context "with an approval message" do
+      it "includes the message in the 'pending_jobs' hash entry" do
+        Job.enqueue_for_approval(:approval_message => 'test message')
+
+        key = '{"id":0,"approval_message":"test message"}'
+        value = '{"class":"Job","args":[]}'
+
+        Resque.redis.hget('pending_jobs', key).should == value
+      end
+    end
   end
 
   describe ".approve" do

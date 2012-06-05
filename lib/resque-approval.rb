@@ -19,10 +19,19 @@ module Resque
       end
 
       def enqueue_for_approval(*args)
+        args = args[0] || {}
+
+        message = args.delete(:approval_message)
+
         Resque.enqueue_to(:approval_required, self, *args)
 
         id = Resque.size(:approval_required) - 1
-        key = { :id => id }.to_json
+
+        if message
+          key = {:id => id, :approval_message => message}.to_json
+        else
+          key = { :id => id }.to_json
+        end
 
         job = Resque.peek(:approval_required, id)
         value = job.to_json
