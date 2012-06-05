@@ -56,4 +56,25 @@ describe "Resque::Plugins::Approval" do
       Resque.redis.hget('pending_jobs', key).should == value
     end
   end
+
+  describe ".approve" do
+    it "moves the job from the approval queue to its normal queue" do
+      key = '{"id":0}'
+
+      Resque.enqueue(Job, :requires_approval => true)
+      Job.approve(key)
+
+      Resque.size(:approval_required).should == 0
+      Resque.size(:dummy).should == 1
+    end
+
+    it "deletes the entry in the 'pending_jobs' hash" do
+      key = '{"id":0}'
+
+      Resque.enqueue(Job, :requires_approval => true)
+      Job.approve(key)
+
+      Resque.redis.hget('pending_jobs', key).should be_nil
+    end
+  end
 end
