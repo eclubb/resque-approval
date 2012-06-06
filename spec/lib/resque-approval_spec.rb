@@ -118,12 +118,12 @@ describe "Resque::Plugins::Approval" do
     end
   end
 
-  describe ".deny" do
+  describe ".reject" do
     it "deletes the job from the approval queue" do
       key = '{"id":0}'
 
       Resque.enqueue(Job, :requires_approval => true)
-      Job.deny(key)
+      Job.reject(key)
 
       Resque.size(:approval_required).should == 0
     end
@@ -132,7 +132,7 @@ describe "Resque::Plugins::Approval" do
       key = '{"id":0}'
 
       Resque.enqueue(Job, :requires_approval => true)
-      Job.deny(key)
+      Job.reject(key)
 
       Resque.size(:dummy).should == 0
     end
@@ -141,13 +141,13 @@ describe "Resque::Plugins::Approval" do
       key = '{"id":0}'
 
       Resque.enqueue(Job, :requires_approval => true)
-      Job.deny(key)
+      Job.reject(key)
 
       Resque.redis.hget('pending_jobs', key).should be_nil
     end
 
     it "returns false when key can not be found" do
-      Job.deny('bad key').should == false
+      Job.reject('bad key').should == false
     end
   end
 end

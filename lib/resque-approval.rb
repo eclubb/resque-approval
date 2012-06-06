@@ -57,7 +57,7 @@ module Resque
         Resque.push(Resque.queue_from_class(self), job)
       end
 
-      def deny(key)
+      def reject(key)
         value = Resque.redis.hget('pending_jobs', key)
 
         return false if value.nil?
