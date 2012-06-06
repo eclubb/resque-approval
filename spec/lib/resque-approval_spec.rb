@@ -23,7 +23,7 @@ describe "Resque::Plugins::Approval" do
   describe ".before_enqueue_approval" do
     context "when a job requires approval" do
       it "calls enqueue_for_approval" do
-        Job.should_receive(:enqueue_for_approval).with()
+        Job.should_receive(:enqueue_for_approval).with({})
         Resque.enqueue(Job, :requires_approval => true)
       end
     end
@@ -51,7 +51,7 @@ describe "Resque::Plugins::Approval" do
       Job.enqueue_for_approval()
 
       key = '{"id":0}'
-      value = '{"class":"Job","args":[]}'
+      value = '{"class":"Job","args":[{}]}'
 
       Resque.redis.hget('pending_jobs', key).should == value
     end
@@ -61,7 +61,7 @@ describe "Resque::Plugins::Approval" do
         Job.enqueue_for_approval(:approval_message => 'test message')
 
         key = '{"id":0,"approval_message":"test message"}'
-        value = '{"class":"Job","args":[]}'
+        value = '{"class":"Job","args":[{}]}'
 
         Resque.redis.hget('pending_jobs', key).should == value
       end

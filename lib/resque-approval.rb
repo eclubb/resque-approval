@@ -9,7 +9,7 @@ module Resque
 
         requires_approval = args.delete(:requires_approval)
         if requires_approval
-          enqueue_for_approval(*args)
+          enqueue_for_approval(args)
           allow_enqueue = false
         else
           allow_enqueue = true
@@ -23,7 +23,7 @@ module Resque
 
         message = args.delete(:approval_message)
 
-        Resque.enqueue_to(:approval_required, self, *args)
+        Resque.enqueue_to(:approval_required, self, args)
 
         id = Resque.size(:approval_required) - 1
 
