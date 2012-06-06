@@ -7,7 +7,7 @@ Gem::Specification.new do |gem|
   gem.date          = Time.now.strftime('%Y-%m-%d')
   gem.description   = %q{A Resque plugin allowing jobs to be sent to a temporary
                          queue to await approval.  Once the job is approved, it
-                         is placed on the normal queue.}
+                         is placed on its normal queue.}
   gem.summary       = %q{A Resque plugin allowing jobs to be sent to a temporary
                          queue to await approval.}
   gem.homepage      = 'https://github.com/eclubb/resque-approval'
