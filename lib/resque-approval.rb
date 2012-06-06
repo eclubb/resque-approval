@@ -41,6 +41,9 @@ module Resque
 
       def approve(key)
         value = Resque.redis.hget('pending_jobs', key)
+
+        return false if value.nil?
+
         job = JSON.parse(value)
 
         Resque.redis.hdel('pending_jobs', key)
