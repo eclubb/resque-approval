@@ -50,6 +50,17 @@ module Resque
         Resque.redis.lrem('queue:approval_required', 1, job.to_json)
         Resque.push(Resque.queue_from_class(self), job)
       end
+
+      def deny(key)
+        value = Resque.redis.hget('pending_jobs', key)
+
+        return false if value.nil?
+
+        job = JSON.parse(value)
+
+        Resque.redis.hdel('pending_jobs', key)
+        Resque.redis.lrem('queue:approval_required', 1, job.to_json)
+      end
     end
   end
 end

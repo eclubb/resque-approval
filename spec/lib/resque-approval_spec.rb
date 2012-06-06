@@ -104,4 +104,37 @@ describe "Resque::Plugins::Approval" do
       Job.approve('bad key').should == false
     end
   end
+
+  describe ".deny" do
+    it "deletes the job from the approval queue" do
+      key = '{"id":0}'
+
+      Resque.enqueue(Job, :requires_approval => true)
+      Job.deny(key)
+
+      Resque.size(:approval_required).should == 0
+    end
+
+    it "does not add  the job to its normal queue" do
+      key = '{"id":0}'
+
+      Resque.enqueue(Job, :requires_approval => true)
+      Job.deny(key)
+
+      Resque.size(:dummy).should == 0
+    end
+
+    it "deletes the entry in the 'pending_jobs' hash" do
+      key = '{"id":0}'
+
+      Resque.enqueue(Job, :requires_approval => true)
+      Job.deny(key)
+
+      Resque.redis.hget('pending_jobs', key).should be_nil
+    end
+
+    it "returns false when key can not be found" do
+      Job.deny('bad key').should == false
+    end
+  end
 end
