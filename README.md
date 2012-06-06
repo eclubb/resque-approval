@@ -41,13 +41,16 @@ arguments to your job:
 Resque.enqueue(Job, :requires_approval => true, :approval_message => 'Test')
 ```
 
-:requires_approval tells resque-approval to put your job in a special queue to
+`:requires_approval` tells resque-approval to put your job in a special queue to
 wait for approval.  If its missing or false, your job is placed in its default
 queue.
 
-:approval_message is an optional message you can reference later.
+`:approval_message` is an optional message you can reference later.
 
-To get a list of pending jobs, call Resque::Plugins::Approval.pending_job_keys.
+To get a list of pending jobs:
+```ruby
+Resque::Plugins::Approval.pending_job_keys
+```
 This will return a list in first-in, first-out order.  Each entry contains an id
 and any message you may have specified when enqueueing the job.
 
