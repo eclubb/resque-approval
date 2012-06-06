@@ -1,4 +1,6 @@
 *.gem
 Gemfile.lock
 .rvmrc
-spec/tmp
+*.pid
+*.swp
+*.swo
