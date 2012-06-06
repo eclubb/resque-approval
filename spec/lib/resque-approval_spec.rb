@@ -21,10 +21,11 @@ describe "Resque::Plugins::Approval" do
   end
 
   describe ".before_enqueue_approval" do
-    context "when a job requires approval" do
+    context "when a job requires approval (via symbol or string)" do
       it "calls enqueue_for_approval" do
-        Job.should_receive(:enqueue_for_approval).with({})
+        Job.should_receive(:enqueue_for_approval).twice.with({})
         Resque.enqueue(Job, :requires_approval => true)
+        Resque.enqueue(Job, 'requires_approval' => true)
       end
     end
 
@@ -56,11 +57,22 @@ describe "Resque::Plugins::Approval" do
       Resque.redis.hget('pending_jobs', key).should == value
     end
 
-    context "with an approval message" do
+    context "with an approval message (via symbol)" do
       it "includes the message in the 'pending_jobs' hash entry" do
-        Job.enqueue_for_approval(:approval_message => 'test message')
+        Job.enqueue_for_approval(:approval_message => 'symbol test message')
 
-        key = '{"id":0,"approval_message":"test message"}'
+        key = '{"id":0,"approval_message":"symbol test message"}'
+        value = '{"class":"Job","args":[{}]}'
+
+        Resque.redis.hget('pending_jobs', key).should == value
+      end
+    end
+
+    context "with an approval message (via string)" do
+      it "includes the message in the 'pending_jobs' hash entry" do
+        Job.enqueue_for_approval('approval_message' => 'string test message')
+
+        key = '{"id":0,"approval_message":"string test message"}'
         value = '{"class":"Job","args":[{}]}'
 
         Resque.redis.hget('pending_jobs', key).should == value

@@ -7,7 +7,7 @@ module Resque
       def before_enqueue_approval(*args)
         args = args[0] || {}
 
-        requires_approval = args.delete(:requires_approval)
+        requires_approval = args.delete(:requires_approval) || args.delete('requires_approval')
         if requires_approval
           enqueue_for_approval(args)
           allow_enqueue = false
@@ -21,7 +21,7 @@ module Resque
       def enqueue_for_approval(*args)
         args = args[0] || {}
 
-        message = args.delete(:approval_message)
+        message = args.delete(:approval_message) || args.delete('approval_message')
 
         Resque.enqueue_to(:approval_required, self, args)
 
