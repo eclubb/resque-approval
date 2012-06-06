@@ -20,6 +20,19 @@ describe "Resque::Plugins::Approval" do
     lambda { Resque::Plugin.lint(Resque::Plugins::Approval) }.should_not raise_error
   end
 
+  describe "#pending_job_keys" do
+    it "lists keys (ordered by id) for all jobs that are waiting for approval" do
+      Job.enqueue_for_approval(:approval_message => 'test message 1')
+      Job.enqueue_for_approval
+      Job.enqueue_for_approval(:approval_message => 'test message 2')
+
+      keys = [{'id' => 0, 'approval_message' => 'test message 1'},
+              {'id' => 1},
+              {'id' => 2, 'approval_message' => 'test message 2'}]
+      Resque::Plugins::Approval.pending_job_keys.should == keys
+    end
+  end
+
   describe ".before_enqueue_approval" do
     context "when a job requires approval (via symbol or string)" do
       it "calls enqueue_for_approval" do

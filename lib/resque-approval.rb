@@ -4,6 +4,12 @@ require 'resque'
 module Resque
   module Plugins
     module Approval
+      def self.pending_job_keys
+        keys = Resque.redis.hkeys('pending_jobs')
+        keys.map! { |key| JSON.parse(key) }
+        keys.sort! { |a, b| a['id'] <=> b['id'] }
+      end
+
       def before_enqueue_approval(*args)
         args = args[0] || {}
 
