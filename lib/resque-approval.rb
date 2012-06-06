@@ -55,6 +55,8 @@ module Resque
         Resque.redis.hdel('pending_jobs', key)
         Resque.redis.lrem('queue:approval_required', 1, job.to_json)
         Resque.push(Resque.queue_from_class(self), job)
+
+        true
       end
 
       def reject(key)
@@ -66,6 +68,8 @@ module Resque
 
         Resque.redis.hdel('pending_jobs', key)
         Resque.redis.lrem('queue:approval_required', 1, job.to_json)
+
+        true
       end
     end
   end
