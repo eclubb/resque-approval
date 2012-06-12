@@ -33,11 +33,7 @@ module Resque
 
         id = Resque.size(:approval_required) - 1
 
-        if message
-          key = Resque.encode(:id => id, :approval_message => message)
-        else
-          key = Resque.encode(:id => id)
-        end
+        key = build_key(id, message)
 
         job = Resque.peek(:approval_required, id)
         value = Resque.encode(job)
@@ -77,6 +73,14 @@ module Resque
 
       def extract_value(args, key)
         args.delete(key.to_sym) || args.delete(key.to_s)
+      end
+
+      def build_key(id, message)
+        key = { :id => id }
+
+        key.merge!(:approval_message => message) if message
+
+        Resque.encode(key)
       end
     end
   end
