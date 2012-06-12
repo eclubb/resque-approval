@@ -6,7 +6,7 @@ module Resque
     module Approval
       def self.pending_job_keys
         keys = Resque.redis.hkeys('pending_jobs')
-        keys.map! { |key| JSON.parse(key) }
+        keys.map! { |key| Resque.decode(key) }
         keys.sort! { |a, b| a['id'] <=> b['id'] }
       end
 
@@ -34,13 +34,13 @@ module Resque
         id = Resque.size(:approval_required) - 1
 
         if message
-          key = {:id => id, :approval_message => message}.to_json
+          key = Resque.encode(:id => id, :approval_message => message)
         else
-          key = { :id => id }.to_json
+          key = Resque.encode(:id => id)
         end
 
         job = Resque.peek(:approval_required, id)
-        value = job.to_json
+        value = Resque.encode(job)
 
         Resque.redis.hset('pending_jobs', key, value)
       end
@@ -50,10 +50,12 @@ module Resque
 
         return false if value.nil?
 
-        job = JSON.parse(value)
+        encoded_job = value
+        job = Resque.decode(value)
 
         Resque.redis.hdel('pending_jobs', key)
-        Resque.redis.lrem('queue:approval_required', 1, job.to_json)
+        Resque.redis.lrem('queue:approval_required', 1, encoded_job)
+
         Resque.push(Resque.queue_from_class(self), job)
 
         true
@@ -64,10 +66,11 @@ module Resque
 
         return false if value.nil?
 
-        job = JSON.parse(value)
+        encoded_job = value
+        job = Resque.decode(value)
 
         Resque.redis.hdel('pending_jobs', key)
-        Resque.redis.lrem('queue:approval_required', 1, job.to_json)
+        Resque.redis.lrem('queue:approval_required', 1, encoded_job)
 
         true
       end
