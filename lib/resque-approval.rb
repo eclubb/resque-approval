@@ -13,7 +13,7 @@ module Resque
       def before_enqueue_approval(*args)
         args = args[0] || {}
 
-        requires_approval = args.delete(:requires_approval) || args.delete('requires_approval')
+        requires_approval = extract_value(args, :requires_approval)
         if requires_approval
           enqueue_for_approval(args)
           allow_enqueue = false
@@ -27,7 +27,7 @@ module Resque
       def enqueue_for_approval(*args)
         args = args[0] || {}
 
-        message = args.delete(:approval_message) || args.delete('approval_message')
+        message = extract_value(args, :approval_message)
 
         Resque.enqueue_to(:approval_required, self, args)
 
@@ -71,6 +71,12 @@ module Resque
         Resque.redis.lrem('queue:approval_required', 1, encoded_job)
 
         job
+      end
+
+      private
+
+      def extract_value(args, key)
+        args.delete(key.to_sym) || args.delete(key.to_s)
       end
     end
   end

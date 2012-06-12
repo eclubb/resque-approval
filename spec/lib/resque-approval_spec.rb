@@ -34,11 +34,10 @@ describe "Resque::Plugins::Approval" do
   end
 
   describe ".before_enqueue_approval" do
-    context "when a job requires approval (via symbol or string)" do
+    context "when a job requires approval" do
       it "calls enqueue_for_approval" do
-        Job.should_receive(:enqueue_for_approval).twice.with({})
+        Job.should_receive(:enqueue_for_approval).with({})
         Resque.enqueue(Job, :requires_approval => true)
-        Resque.enqueue(Job, 'requires_approval' => true)
       end
     end
 
@@ -70,22 +69,11 @@ describe "Resque::Plugins::Approval" do
       Resque.redis.hget('pending_jobs', key).should == value
     end
 
-    context "with an approval message (via symbol)" do
+    context "with an approval message" do
       it "includes the message in the 'pending_jobs' hash entry" do
-        Job.enqueue_for_approval(:approval_message => 'symbol test message')
+        Job.enqueue_for_approval(:approval_message => 'test message')
 
-        key = '{"id":0,"approval_message":"symbol test message"}'
-        value = '{"class":"Job","args":[{}]}'
-
-        Resque.redis.hget('pending_jobs', key).should == value
-      end
-    end
-
-    context "with an approval message (via string)" do
-      it "includes the message in the 'pending_jobs' hash entry" do
-        Job.enqueue_for_approval('approval_message' => 'string test message')
-
-        key = '{"id":0,"approval_message":"string test message"}'
+        key = '{"id":0,"approval_message":"test message"}'
         value = '{"class":"Job","args":[{}]}'
 
         Resque.redis.hget('pending_jobs', key).should == value
@@ -169,6 +157,40 @@ describe "Resque::Plugins::Approval" do
 
     it "returns nil when key can not be found" do
       Job.remove_from_pending('bad key').should == nil
+    end
+  end
+
+  describe ".extract_value" do
+    context "when key is a symbol" do
+      it "deletes and returns value by symbol-referenced key" do
+        hash = { :key => 1 }
+
+        Job.send(:extract_value, hash, :key).should == 1
+        hash.should == {}
+      end
+
+      it "deletes and returns value by string-referenced key" do
+        hash = { :key => 1 }
+
+        Job.send(:extract_value, hash, 'key').should == 1
+        hash.should == {}
+      end
+    end
+
+    context "when key is a string" do
+      it "deletes and returns value by symbol-referenced key" do
+        hash = { 'key' => 1 }
+
+        Job.send(:extract_value, hash, :key).should == 1
+        hash.should == {}
+      end
+
+      it "deletes and returns value by string-referenced key" do
+        hash = { 'key' => 1 }
+
+        Job.send(:extract_value, hash, 'key').should == 1
+        hash.should == {}
+      end
     end
   end
 end
