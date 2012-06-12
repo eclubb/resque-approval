@@ -46,15 +46,9 @@ module Resque
       end
 
       def approve(key)
-        value = Resque.redis.hget('pending_jobs', key)
+        job = remove_from_pending(key)
 
-        return false if value.nil?
-
-        encoded_job = value
-        job = Resque.decode(value)
-
-        Resque.redis.hdel('pending_jobs', key)
-        Resque.redis.lrem('queue:approval_required', 1, encoded_job)
+        return false if job.nil?
 
         Resque.push(Resque.queue_from_class(self), job)
 
@@ -62,9 +56,13 @@ module Resque
       end
 
       def reject(key)
+        !!remove_from_pending(key)
+      end
+
+      def remove_from_pending(key)
         value = Resque.redis.hget('pending_jobs', key)
 
-        return false if value.nil?
+        return if value.nil?
 
         encoded_job = value
         job = Resque.decode(value)
@@ -72,7 +70,7 @@ module Resque
         Resque.redis.hdel('pending_jobs', key)
         Resque.redis.lrem('queue:approval_required', 1, encoded_job)
 
-        true
+        job
       end
     end
   end
