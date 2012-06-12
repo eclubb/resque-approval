@@ -1,3 +1,4 @@
+require 'rspec'
 require 'resque-approval'
 
 def start_redis
