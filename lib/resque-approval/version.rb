@@ -1,7 +1,7 @@
 module Resque
   module Plugins
     module Approval
-      VERSION = '1.0.1'
+      VERSION = '1.2.0'
     end
   end
 end
