@@ -1,5 +1,6 @@
 require 'rspec'
 require 'resque-approval'
+require 'resque_scheduler'
 
 def start_redis
   redis_config = <<END

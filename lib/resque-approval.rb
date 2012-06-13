@@ -24,16 +24,32 @@ module Resque
         allow_enqueue
       end
 
+      def before_delayed_enqueue(args)
+        key = extract_value(args, :approval_key)
+        Resque.redis.hdel('pending_jobs', key)
+      end
+
       def enqueue_for_approval(*args)
         args = args[0] || {}
 
         message = extract_value(args, :approval_message)
+        timeout = extract_value(args, :approval_timeout)
 
         id = Resque.redis.hlen('pending_jobs')
-        key = build_key(id, message)
-        value = build_value(nil, args)
+        key = build_key(id, message, timeout)
 
-        Resque.enqueue_to(:approval_required, self, args)
+        if timeout && Resque.respond_to?(:enqueue_in)
+          approval_args = args.merge(:approval_key => key)
+          Resque.enqueue_in(timeout, self, approval_args)
+
+          queue = Resque.queue_from_class(self)
+          value = build_value(queue, approval_args)
+        else
+          Resque.enqueue_to(:approval_required, self, args)
+
+          value = build_value(nil, args)
+        end
+
         Resque.redis.hset('pending_jobs', key, value)
       end
 
@@ -60,7 +76,16 @@ module Resque
         job = Resque.decode(value)
 
         Resque.redis.hdel('pending_jobs', key)
-        Resque.redis.lrem('queue:approval_required', 1, encoded_job)
+
+        decoded_key = Resque.decode(key)
+        if decoded_key.has_key? 'approval_timeout'
+          Array(Resque.redis.keys("delayed:*")).each do |key|
+            destroyed = Resque.redis.lrem(key, 1, encoded_job)
+            break if destroyed > 0
+          end
+        else
+          Resque.redis.lrem('queue:approval_required', 1, encoded_job)
+        end
 
         job
       end
@@ -71,16 +96,19 @@ module Resque
         args.delete(key.to_sym) || args.delete(key.to_s)
       end
 
-      def build_key(id, message)
+      def build_key(id, message, timeout = nil)
         key = { :id => id }
 
         key.merge!(:approval_message => message) if message
+        key.merge!(:approval_timeout => timeout) if timeout
 
         Resque.encode(key)
       end
 
       def build_value(queue = nil, *args)
         value = { :class => self.to_s, :args => args }
+
+        value.merge!(:queue => queue) if queue
 
         Resque.encode(value)
       end

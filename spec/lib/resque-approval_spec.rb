@@ -14,6 +14,7 @@ describe "Resque::Plugins::Approval" do
     Resque.remove_queue(:dummy)
     Resque.remove_queue(:approval_required)
     Resque.redis.del('pending_jobs')
+    Resque.reset_delayed_queue
   end
 
   it "is a valid Resque plugin" do
@@ -23,12 +24,12 @@ describe "Resque::Plugins::Approval" do
   describe "#pending_job_keys" do
     it "lists keys (ordered by id) for all jobs that are waiting for approval" do
       Job.enqueue_for_approval
-      Job.enqueue_for_approval(:approval_message => 'test message 1')
-      Job.enqueue_for_approval(:approval_message => 'test message 2')
+      Job.enqueue_for_approval(:approval_timeout => 10)
+      Job.enqueue_for_approval(:approval_message => 'test message')
 
       keys = [{ 'id' => 0 },
-              { 'id' => 1, 'approval_message' => 'test message 1' },
-              { 'id' => 2, 'approval_message' => 'test message 2' }]
+              { 'id' => 1, 'approval_timeout' => 10 },
+              { 'id' => 2, 'approval_message' => 'test message' }]
       Resque::Plugins::Approval.pending_job_keys.should == keys
     end
   end
@@ -79,6 +80,32 @@ describe "Resque::Plugins::Approval" do
         Resque.redis.hget('pending_jobs', key).should == value
       end
     end
+
+    context "with a timeout" do
+      it "includes the timeout in the 'pending_jobs' hash entry" do
+        Job.enqueue_for_approval(:approval_timeout => 10)
+
+        key = '{"id":0,"approval_timeout":10}'
+        args = { :approval_key => key }
+        value = { :class => Job, :args => [args], :queue => :dummy }
+        value = Resque.encode(value)
+
+        Resque.redis.hget('pending_jobs', key).should == value
+      end
+
+      it "schedules the job" do
+        Resque.count_all_scheduled_jobs.should == 0
+
+        Job.enqueue_for_approval(:approval_timeout => 10)
+
+        Resque.count_all_scheduled_jobs.should == 1
+      end
+
+      it "does not add the job to the appoval queue" do
+        Job.enqueue_for_approval(:approval_timeout => 10)
+        Resque.size(:approval_required).should == 0
+      end
+    end
   end
 
   describe ".approve" do
@@ -89,13 +116,26 @@ describe "Resque::Plugins::Approval" do
       Job.approve(key)
     end
 
-    it "adds  the job to its normal queue" do
-      key = '{"id":0}'
+    context "without a timeout" do
+      it "adds  the job to its normal queue" do
+        key = '{"id":0}'
 
-      Job.enqueue_for_approval
-      Job.approve(key)
+        Job.enqueue_for_approval
+        Job.approve(key)
 
-      Resque.size(:dummy).should == 1
+        Resque.size(:dummy).should == 1
+      end
+    end
+
+    context "with a timeout" do
+      it "adds  the job to its normal queue" do
+        key = '{"id":0,"approval_timeout":10}'
+
+        Job.enqueue_for_approval(:approval_timeout => 10)
+        Job.approve(key)
+
+        Resque.size(:dummy).should == 1
+      end
     end
 
     it "returns false when key can not be found" do
@@ -126,13 +166,29 @@ describe "Resque::Plugins::Approval" do
   end
 
   describe ".remove_from_pending" do
-    it "deletes the job from the approval queue" do
-      key = '{"id":0}'
+    context "without a timeout" do
+      it "deletes the job from the approval queue" do
+        key = '{"id":0}'
 
-      Job.enqueue_for_approval
-      Job.remove_from_pending(key)
+        Job.enqueue_for_approval
+        Job.remove_from_pending(key)
 
-      Resque.size(:approval_required).should == 0
+        Resque.size(:approval_required).should == 0
+      end
+    end
+
+    context "with a timeout" do
+      it "unschedules the job" do
+        key = '{"id":0,"approval_timeout":10}'
+
+        Job.enqueue_for_approval(:approval_timeout => 10)
+
+        Resque.count_all_scheduled_jobs.should == 1
+
+        Job.remove_from_pending(key)
+
+        Resque.count_all_scheduled_jobs.should == 0
+      end
     end
 
     it "deletes the entry in the 'pending_jobs' hash" do
