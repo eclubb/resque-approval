@@ -29,15 +29,11 @@ module Resque
 
         message = extract_value(args, :approval_message)
 
-        Resque.enqueue_to(:approval_required, self, args)
-
-        id = Resque.size(:approval_required) - 1
-
+        id = Resque.redis.hlen('pending_jobs')
         key = build_key(id, message)
+        value = build_value(nil, args)
 
-        job = Resque.peek(:approval_required, id)
-        value = Resque.encode(job)
-
+        Resque.enqueue_to(:approval_required, self, args)
         Resque.redis.hset('pending_jobs', key, value)
       end
 
@@ -81,6 +77,12 @@ module Resque
         key.merge!(:approval_message => message) if message
 
         Resque.encode(key)
+      end
+
+      def build_value(queue = nil, *args)
+        value = { :class => self.to_s, :args => args }
+
+        Resque.encode(value)
       end
     end
   end

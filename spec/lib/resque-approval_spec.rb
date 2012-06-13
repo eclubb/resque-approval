@@ -22,13 +22,13 @@ describe "Resque::Plugins::Approval" do
 
   describe "#pending_job_keys" do
     it "lists keys (ordered by id) for all jobs that are waiting for approval" do
-      Job.enqueue_for_approval(:approval_message => 'test message 1')
       Job.enqueue_for_approval
+      Job.enqueue_for_approval(:approval_message => 'test message 1')
       Job.enqueue_for_approval(:approval_message => 'test message 2')
 
-      keys = [{'id' => 0, 'approval_message' => 'test message 1'},
-              {'id' => 1},
-              {'id' => 2, 'approval_message' => 'test message 2'}]
+      keys = [{ 'id' => 0 },
+              { 'id' => 1, 'approval_message' => 'test message 1' },
+              { 'id' => 2, 'approval_message' => 'test message 2' }]
       Resque::Plugins::Approval.pending_job_keys.should == keys
     end
   end
@@ -61,7 +61,7 @@ describe "Resque::Plugins::Approval" do
     end
 
     it "adds an entry to the 'pending_jobs' hash" do
-      Job.enqueue_for_approval()
+      Job.enqueue_for_approval
 
       key = '{"id":0}'
       value = '{"class":"Job","args":[{}]}'
@@ -82,23 +82,20 @@ describe "Resque::Plugins::Approval" do
   end
 
   describe ".approve" do
-    it "moves the job from the approval queue to its normal queue" do
+    it "calls .remove_from_pending" do
       key = '{"id":0}'
 
-      Resque.enqueue(Job, :requires_approval => true)
+      Job.should_receive(:remove_from_pending).with(key)
       Job.approve(key)
-
-      Resque.size(:approval_required).should == 0
-      Resque.size(:dummy).should == 1
     end
 
-    it "deletes the entry in the 'pending_jobs' hash" do
+    it "adds  the job to its normal queue" do
       key = '{"id":0}'
 
-      Resque.enqueue(Job, :requires_approval => true)
+      Job.enqueue_for_approval
       Job.approve(key)
 
-      Resque.redis.hget('pending_jobs', key).should be_nil
+      Resque.size(:dummy).should == 1
     end
 
     it "returns false when key can not be found" do
@@ -117,7 +114,7 @@ describe "Resque::Plugins::Approval" do
     it "does not add  the job to its normal queue" do
       key = '{"id":0}'
 
-      Resque.enqueue(Job, :requires_approval => true)
+      Job.enqueue_for_approval
       Job.reject(key)
 
       Resque.size(:dummy).should == 0
@@ -132,7 +129,7 @@ describe "Resque::Plugins::Approval" do
     it "deletes the job from the approval queue" do
       key = '{"id":0}'
 
-      Resque.enqueue(Job, :requires_approval => true)
+      Job.enqueue_for_approval
       Job.remove_from_pending(key)
 
       Resque.size(:approval_required).should == 0
@@ -141,7 +138,7 @@ describe "Resque::Plugins::Approval" do
     it "deletes the entry in the 'pending_jobs' hash" do
       key = '{"id":0}'
 
-      Resque.enqueue(Job, :requires_approval => true)
+      Job.enqueue_for_approval
       Job.remove_from_pending(key)
 
       Resque.redis.hget('pending_jobs', key).should be_nil
@@ -151,7 +148,7 @@ describe "Resque::Plugins::Approval" do
       key = '{"id":0}'
       job = { 'class' => 'Job', 'args' => [{}] }
 
-      Resque.enqueue(Job, :requires_approval => true)
+      Job.enqueue_for_approval
       job = Job.remove_from_pending(key).should == job
     end
 
