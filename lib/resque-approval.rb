@@ -38,7 +38,7 @@ module Resque
         id = Resque.redis.hlen('pending_jobs')
         key = build_key(id, message, timeout)
 
-        if timeout && Resque.respond_to?(:enqueue_in)
+        if timeout.kind_of?(Numeric) && timeout > 0 && Resque.respond_to?(:enqueue_in)
           approval_args = args.merge(:approval_key => key)
           Resque.enqueue_in(timeout, self, approval_args)
 

@@ -106,6 +106,31 @@ describe "Resque::Plugins::Approval" do
         Resque.size(:approval_required).should == 0
       end
     end
+
+    context "with a disabled timeout" do
+      it "includes the timeout in the 'pending_jobs' hash entry" do
+        Job.enqueue_for_approval(:approval_timeout => 0)
+
+        key = '{"id":0,"approval_timeout":0}'
+        value = { :class => Job, :args => [{}] }
+        value = Resque.encode(value)
+
+        Resque.redis.hget('pending_jobs', key).should == value
+      end
+
+      it "does not schedule the job" do
+        Resque.count_all_scheduled_jobs.should == 0
+
+        Job.enqueue_for_approval(:approval_timeout => 0)
+
+        Resque.count_all_scheduled_jobs.should == 0
+      end
+
+      it "adds the job to the appoval queue" do
+        Job.enqueue_for_approval(:approval_timeout => 0)
+        Resque.size(:approval_required).should == 1
+      end
+    end
   end
 
   describe ".approve" do
