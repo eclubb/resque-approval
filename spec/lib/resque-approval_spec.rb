@@ -18,7 +18,7 @@ describe "Resque::Plugins::Approval" do
   end
 
   it "is a valid Resque plugin" do
-    lambda { Resque::Plugin.lint(Resque::Plugins::Approval) }.should_not raise_error
+    expect { Resque::Plugin.lint(Resque::Plugins::Approval) }.not_to raise_error
   end
 
   describe "#pending_job_keys" do
@@ -30,21 +30,21 @@ describe "Resque::Plugins::Approval" do
       keys = [{ 'id' => 0 },
               { 'id' => 1, 'approval_timeout' => 10 },
               { 'id' => 2, 'approval_message' => 'test message' }]
-      Resque::Plugins::Approval.pending_job_keys.should == keys
+      expect(Resque::Plugins::Approval.pending_job_keys).to eq(keys)
     end
   end
 
   describe ".before_enqueue_approval" do
     context "when a job requires approval" do
       it "calls enqueue_for_approval" do
-        Job.should_receive(:enqueue_for_approval).with({})
+        expect(Job).to receive(:enqueue_for_approval).with({})
         Resque.enqueue(Job, :requires_approval => true)
       end
     end
 
     context "when a job does not require approval" do
       it "does not call enqueue_for_approval" do
-        Job.should_not_receive(:enqueue_for_approval)
+        expect(Job).not_to receive(:enqueue_for_approval)
         Resque.enqueue(Job)
       end
     end
@@ -53,12 +53,12 @@ describe "Resque::Plugins::Approval" do
   describe ".enqueue_for_approval" do
     it "adds the job to the appoval queue" do
       Job.enqueue_for_approval
-      Resque.size(:approval_required).should == 1
+      expect(Resque.size(:approval_required)).to eq(1)
     end
 
     it "does not add the job to the dummy queue" do
       Job.enqueue_for_approval
-      Resque.size(:dummy).should == 0
+      expect(Resque.size(:dummy)).to eq(0)
     end
 
     it "adds an entry to the 'pending_jobs' hash" do
@@ -67,7 +67,7 @@ describe "Resque::Plugins::Approval" do
       key = '{"id":0}'
       value = '{"class":"Job","args":[{}]}'
 
-      Resque.redis.hget('pending_jobs', key).should == value
+      expect(Resque.redis.hget('pending_jobs', key)).to eq(value)
     end
 
     context "with an approval message" do
@@ -77,7 +77,7 @@ describe "Resque::Plugins::Approval" do
         key = '{"id":0,"approval_message":"test message"}'
         value = '{"class":"Job","args":[{}]}'
 
-        Resque.redis.hget('pending_jobs', key).should == value
+        expect(Resque.redis.hget('pending_jobs', key)).to eq(value)
       end
     end
 
@@ -90,20 +90,20 @@ describe "Resque::Plugins::Approval" do
         value = { :class => Job, :args => [args], :queue => :dummy }
         value = Resque.encode(value)
 
-        Resque.redis.hget('pending_jobs', key).should == value
+        expect(Resque.redis.hget('pending_jobs', key)).to eq(value)
       end
 
       it "schedules the job" do
-        Resque.count_all_scheduled_jobs.should == 0
+        expect(Resque.count_all_scheduled_jobs).to eq(0)
 
         Job.enqueue_for_approval(:approval_timeout => 10)
 
-        Resque.count_all_scheduled_jobs.should == 1
+        expect(Resque.count_all_scheduled_jobs).to eq(1)
       end
 
       it "does not add the job to the appoval queue" do
         Job.enqueue_for_approval(:approval_timeout => 10)
-        Resque.size(:approval_required).should == 0
+        expect(Resque.size(:approval_required)).to eq(0)
       end
     end
 
@@ -115,20 +115,20 @@ describe "Resque::Plugins::Approval" do
         value = { :class => Job, :args => [{}] }
         value = Resque.encode(value)
 
-        Resque.redis.hget('pending_jobs', key).should == value
+        expect(Resque.redis.hget('pending_jobs', key)).to eq(value)
       end
 
       it "does not schedule the job" do
-        Resque.count_all_scheduled_jobs.should == 0
+        expect(Resque.count_all_scheduled_jobs).to eq(0)
 
         Job.enqueue_for_approval(:approval_timeout => 0)
 
-        Resque.count_all_scheduled_jobs.should == 0
+        expect(Resque.count_all_scheduled_jobs).to eq(0)
       end
 
       it "adds the job to the appoval queue" do
         Job.enqueue_for_approval(:approval_timeout => 0)
-        Resque.size(:approval_required).should == 1
+        expect(Resque.size(:approval_required)).to eq(1)
       end
     end
   end
@@ -137,7 +137,7 @@ describe "Resque::Plugins::Approval" do
     it "calls .remove_from_pending" do
       key = '{"id":0}'
 
-      Job.should_receive(:remove_from_pending).with(key)
+      expect(Job).to receive(:remove_from_pending).with(key)
       Job.approve(key)
     end
 
@@ -148,7 +148,7 @@ describe "Resque::Plugins::Approval" do
         Job.enqueue_for_approval
         Job.approve(key)
 
-        Resque.size(:dummy).should == 1
+        expect(Resque.size(:dummy)).to eq(1)
       end
     end
 
@@ -159,12 +159,12 @@ describe "Resque::Plugins::Approval" do
         Job.enqueue_for_approval(:approval_timeout => 10)
         Job.approve(key)
 
-        Resque.size(:dummy).should == 1
+        expect(Resque.size(:dummy)).to eq(1)
       end
     end
 
     it "returns false when key can not be found" do
-      Job.approve('bad key').should == false
+      expect(Job.approve('bad key')).to eq(false)
     end
   end
 
@@ -172,7 +172,7 @@ describe "Resque::Plugins::Approval" do
     it "calls .remove_from_pending" do
       key = '{"id":0}'
 
-      Job.should_receive(:remove_from_pending).with(key)
+      expect(Job).to receive(:remove_from_pending).with(key)
       Job.reject(key)
     end
 
@@ -182,11 +182,11 @@ describe "Resque::Plugins::Approval" do
       Job.enqueue_for_approval
       Job.reject(key)
 
-      Resque.size(:dummy).should == 0
+      expect(Resque.size(:dummy)).to eq(0)
     end
 
     it "returns false when key can not be found" do
-      Job.reject('bad key').should == false
+      expect(Job.reject('bad key')).to eq(false)
     end
   end
 
@@ -198,7 +198,7 @@ describe "Resque::Plugins::Approval" do
         Job.enqueue_for_approval
         Job.remove_from_pending(key)
 
-        Resque.size(:approval_required).should == 0
+        expect(Resque.size(:approval_required)).to eq(0)
       end
     end
 
@@ -208,11 +208,11 @@ describe "Resque::Plugins::Approval" do
 
         Job.enqueue_for_approval(:approval_timeout => 10)
 
-        Resque.count_all_scheduled_jobs.should == 1
+        expect(Resque.count_all_scheduled_jobs).to eq(1)
 
         Job.remove_from_pending(key)
 
-        Resque.count_all_scheduled_jobs.should == 0
+        expect(Resque.count_all_scheduled_jobs).to eq(0)
       end
     end
 
@@ -222,7 +222,7 @@ describe "Resque::Plugins::Approval" do
       Job.enqueue_for_approval
       Job.remove_from_pending(key)
 
-      Resque.redis.hget('pending_jobs', key).should be_nil
+      expect(Resque.redis.hget('pending_jobs', key)).to be_nil
     end
 
     it "returns job when key can be found" do
@@ -230,11 +230,11 @@ describe "Resque::Plugins::Approval" do
       job = { 'class' => 'Job', 'args' => [{}] }
 
       Job.enqueue_for_approval
-      job = Job.remove_from_pending(key).should == job
+      job = expect(Job.remove_from_pending(key)).to eq(job)
     end
 
     it "returns nil when key can not be found" do
-      Job.remove_from_pending('bad key').should == nil
+      expect(Job.remove_from_pending('bad key')).to eq(nil)
     end
   end
 
@@ -243,15 +243,15 @@ describe "Resque::Plugins::Approval" do
       it "deletes and returns value by symbol-referenced key" do
         hash = { :key => 1 }
 
-        Job.send(:extract_value, hash, :key).should == 1
-        hash.should == {}
+        expect(Job.send(:extract_value, hash, :key)).to eq(1)
+        expect(hash).to eq({})
       end
 
       it "deletes and returns value by string-referenced key" do
         hash = { :key => 1 }
 
-        Job.send(:extract_value, hash, 'key').should == 1
-        hash.should == {}
+        expect(Job.send(:extract_value, hash, 'key')).to eq(1)
+        expect(hash).to eq({})
       end
     end
 
@@ -259,15 +259,15 @@ describe "Resque::Plugins::Approval" do
       it "deletes and returns value by symbol-referenced key" do
         hash = { 'key' => 1 }
 
-        Job.send(:extract_value, hash, :key).should == 1
-        hash.should == {}
+        expect(Job.send(:extract_value, hash, :key)).to eq(1)
+        expect(hash).to eq({})
       end
 
       it "deletes and returns value by string-referenced key" do
         hash = { 'key' => 1 }
 
-        Job.send(:extract_value, hash, 'key').should == 1
-        hash.should == {}
+        expect(Job.send(:extract_value, hash, 'key')).to eq(1)
+        expect(hash).to eq({})
       end
     end
   end
